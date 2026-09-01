@@ -1,6 +1,6 @@
 {
   "name": "sistema-industrial-enterprise-os",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@prisma/client": "6.15.0",
+    "@supabase/supabase-js": "2.57.4",
     "bcryptjs": "3.0.2",
     "jose": "6.1.0",
     "lucide-react": "0.542.0",
