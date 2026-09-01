@@ -1,4 +1,4 @@
-import { BarChart3, Barcode, Boxes, Building2, CircleDollarSign, ClipboardCheck, Factory, FileText, Gauge, PackageSearch, ReceiptText, Settings, ShoppingCart, Store, Truck, UserRound, UsersRound, Warehouse, Wrench } from "lucide-react";
+import { BarChart3, Barcode, CircleDollarSign, ClipboardCheck, Factory, Gauge, ReceiptText, Settings, ShoppingCart, Store, Truck, UserRound, UsersRound, Warehouse, Wrench } from "lucide-react";
 
 export type ErpStage={slug:string;label:string;description:string};
 export type ErpSector={slug:string;label:string;icon:typeof Gauge;stages:ErpStage[]};
