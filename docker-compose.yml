@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+    ports: ["3000:3000"]
+    environment:
+      DATABASE_URL: file:/data/sistema-industrial.db
+      AUTH_SECRET: ${AUTH_SECRET:-alterar-antes-de-publicar-uma-chave-segura}
+    volumes:
+      - industrial_data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+volumes:
+  industrial_data:
