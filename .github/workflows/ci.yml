@@ -1,14 +1,36 @@
 name: CI
+
 on:
   push:
     branches: [main]
   pull_request:
+
 jobs:
   validate:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: industrial_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d industrial_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
-      DATABASE_URL: file:./ci.db
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/industrial_ci?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/industrial_ci?schema=public
       AUTH_SECRET: ci-only-secret-change-me-32-characters
+      SUPABASE_URL: https://example.supabase.co
+      SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
