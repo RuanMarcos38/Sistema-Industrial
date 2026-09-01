@@ -1,19 +1,260 @@
-generator client { provider = "prisma-client-js" }
-datasource db { provider = "sqlite"; url = env("DATABASE_URL") }
-model Tenant { id String @id @default(cuid()) name String slug String @unique plan String @default("enterprise") status String @default("active") createdAt DateTime @default(now()) memberships Membership[] organizations Organization[] customers Customer[] suppliers Supplier[] products Product[] salesOrders SalesOrder[] purchaseOrders PurchaseOrder[] productionOrders ProductionOrder[] receivables Receivable[] payables Payable[] employees Employee[] shipments Shipment[] auditLogs AuditLog[] }
-model User { id String @id @default(cuid()) name String email String @unique passwordHash String createdAt DateTime @default(now()) memberships Membership[] }
-model Membership { id String @id @default(cuid()) tenantId String userId String role String tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Cascade) user User @relation(fields:[userId],references:[id],onDelete:Cascade) @@unique([tenantId,userId]) @@index([tenantId]) }
-model Organization { id String @id @default(cuid()) tenantId String legalName String tradeName String cnpj String city String state String tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Cascade) employees Employee[] warehouses Warehouse[] @@unique([tenantId,cnpj]) @@index([tenantId]) }
-model Customer { id String @id @default(cuid()) tenantId String name String document String email String? phone String? status String @default("active") createdAt DateTime @default(now()) tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Cascade) @@unique([tenantId,document]) @@index([tenantId,status]) }
-model Supplier { id String @id @default(cuid()) tenantId String name String document String email String? leadTimeDays Int @default(7) status String @default("active") createdAt DateTime @default(now()) tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Cascade) @@unique([tenantId,document]) @@index([tenantId,status]) }
-model Product { id String @id @default(cuid()) tenantId String sku String name String category String priceCents Int @default(0) costCents Int @default(0) status String @default("active") createdAt DateTime @default(now()) tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Cascade) inventoryBalances InventoryBalance[] @@unique([tenantId,sku]) @@index([tenantId,status]) }
-model Warehouse { id String @id @default(cuid()) tenantId String organizationId String code String name String organization Organization @relation(fields:[organizationId],references:[id],onDelete:Cascade) inventoryBalances InventoryBalance[] @@unique([tenantId,code]) @@index([tenantId]) }
-model InventoryBalance { id String @id @default(cuid()) tenantId String warehouseId String productId String quantity Int @default(0) reserved Int @default(0) reorderPoint Int @default(0) warehouse Warehouse @relation(fields:[warehouseId],references:[id],onDelete:Cascade) product Product @relation(fields:[productId],references:[id],onDelete:Cascade) @@unique([tenantId,warehouseId,productId]) @@index([tenantId,productId]) }
-model SalesOrder { id String @id @default(cuid()) tenantId String number String customerName String totalCents Int status String @default("open") createdAt DateTime @default(now()) tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Cascade) @@unique([tenantId,number]) @@index([tenantId,status]) }
-model PurchaseOrder { id String @id @default(cuid()) tenantId String number String supplierName String totalCents Int status String @default("open") expectedAt DateTime? createdAt DateTime @default(now()) tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Cascade) @@unique([tenantId,number]) @@index([tenantId,status]) }
-model ProductionOrder { id String @id @default(cuid()) tenantId String number String productName String plannedQty Int producedQty Int @default(0) status String @default("planned") dueAt DateTime? createdAt DateTime @default(now()) tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Cascade) @@unique([tenantId,number]) @@index([tenantId,status]) }
-model Receivable { id String @id @default(cuid()) tenantId String description String amountCents Int dueAt DateTime status String @default("open") createdAt DateTime @default(now()) tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Cascade) @@index([tenantId,status,dueAt]) }
-model Payable { id String @id @default(cuid()) tenantId String description String amountCents Int dueAt DateTime status String @default("open") createdAt DateTime @default(now()) tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Cascade) @@index([tenantId,status,dueAt]) }
-model Employee { id String @id @default(cuid()) tenantId String organizationId String registration String name String department String position String status String @default("active") hiredAt DateTime tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Cascade) organization Organization @relation(fields:[organizationId],references:[id],onDelete:Cascade) @@unique([tenantId,registration]) @@index([tenantId,status]) }
-model Shipment { id String @id @default(cuid()) tenantId String code String carrier String destination String status String @default("preparing") freightCents Int @default(0) eta DateTime? createdAt DateTime @default(now()) tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Cascade) @@unique([tenantId,code]) @@index([tenantId,status]) }
-model AuditLog { id String @id @default(cuid()) tenantId String actorId String action String entity String entityId String payload String createdAt DateTime @default(now()) tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Restrict) @@index([tenantId,createdAt]) }
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id               String            @id @default(cuid())
+  name             String
+  slug             String            @unique
+  plan             String            @default("enterprise")
+  status           String            @default("active")
+  createdAt        DateTime          @default(now())
+  memberships      Membership[]
+  organizations    Organization[]
+  customers        Customer[]
+  suppliers        Supplier[]
+  products         Product[]
+  salesOrders      SalesOrder[]
+  purchaseOrders   PurchaseOrder[]
+  productionOrders ProductionOrder[]
+  receivables      Receivable[]
+  payables         Payable[]
+  employees        Employee[]
+  shipments        Shipment[]
+  auditLogs        AuditLog[]
+}
+
+model User {
+  id           String       @id @default(cuid())
+  name         String
+  email        String       @unique
+  passwordHash String
+  createdAt    DateTime     @default(now())
+  memberships  Membership[]
+}
+
+model Membership {
+  id       String @id @default(cuid())
+  tenantId String
+  userId   String
+  role     String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([tenantId])
+}
+
+model Organization {
+  id             String      @id @default(cuid())
+  tenantId       String
+  legalName      String
+  tradeName      String
+  cnpj           String
+  city           String
+  state          String
+  tenant         Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employees      Employee[]
+  warehouses     Warehouse[]
+
+  @@unique([tenantId, cnpj])
+  @@index([tenantId])
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  document  String
+  email     String?
+  phone     String?
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, document])
+  @@index([tenantId, status])
+}
+
+model Supplier {
+  id           String   @id @default(cuid())
+  tenantId     String
+  name         String
+  document     String
+  email        String?
+  leadTimeDays Int      @default(7)
+  status       String   @default("active")
+  createdAt    DateTime @default(now())
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, document])
+  @@index([tenantId, status])
+}
+
+model Product {
+  id                String             @id @default(cuid())
+  tenantId          String
+  sku               String
+  name              String
+  category          String
+  priceCents        Int                @default(0)
+  costCents         Int                @default(0)
+  status            String             @default("active")
+  createdAt         DateTime           @default(now())
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  inventoryBalances InventoryBalance[]
+
+  @@unique([tenantId, sku])
+  @@index([tenantId, status])
+}
+
+model Warehouse {
+  id                String             @id @default(cuid())
+  tenantId          String
+  organizationId    String
+  code              String
+  name              String
+  organization      Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  inventoryBalances InventoryBalance[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+model InventoryBalance {
+  id           String    @id @default(cuid())
+  tenantId     String
+  warehouseId  String
+  productId    String
+  quantity     Int       @default(0)
+  reserved     Int       @default(0)
+  reorderPoint Int       @default(0)
+  warehouse    Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  product      Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, warehouseId, productId])
+  @@index([tenantId, productId])
+}
+
+model SalesOrder {
+  id           String   @id @default(cuid())
+  tenantId     String
+  number       String
+  customerName String
+  totalCents   Int
+  status       String   @default("open")
+  createdAt    DateTime @default(now())
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+}
+
+model PurchaseOrder {
+  id           String    @id @default(cuid())
+  tenantId     String
+  number       String
+  supplierName String
+  totalCents   Int
+  status       String    @default("open")
+  expectedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+}
+
+model ProductionOrder {
+  id          String    @id @default(cuid())
+  tenantId    String
+  number      String
+  productName String
+  plannedQty  Int
+  producedQty Int       @default(0)
+  status      String    @default("planned")
+  dueAt       DateTime?
+  createdAt   DateTime  @default(now())
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+}
+
+model Receivable {
+  id          String   @id @default(cuid())
+  tenantId    String
+  description String
+  amountCents Int
+  dueAt       DateTime
+  status      String   @default("open")
+  createdAt   DateTime @default(now())
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status, dueAt])
+}
+
+model Payable {
+  id          String   @id @default(cuid())
+  tenantId    String
+  description String
+  amountCents Int
+  dueAt       DateTime
+  status      String   @default("open")
+  createdAt   DateTime @default(now())
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status, dueAt])
+}
+
+model Employee {
+  id             String       @id @default(cuid())
+  tenantId       String
+  organizationId String
+  registration   String
+  name           String
+  department     String
+  position       String
+  status         String       @default("active")
+  hiredAt        DateTime
+  tenant         Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, registration])
+  @@index([tenantId, status])
+}
+
+model Shipment {
+  id           String    @id @default(cuid())
+  tenantId     String
+  code         String
+  carrier      String
+  destination  String
+  status       String    @default("preparing")
+  freightCents Int       @default(0)
+  eta          DateTime?
+  createdAt    DateTime  @default(now())
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, code])
+  @@index([tenantId, status])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  tenantId  String
+  actorId   String
+  action    String
+  entity    String
+  entityId  String
+  payload   String
+  createdAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, createdAt])
+}
