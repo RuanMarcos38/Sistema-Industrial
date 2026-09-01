@@ -1,41 +1,96 @@
 # Sistema Industrial OS
 
-SaaS corporativo multiempresa para Comercial/CRM, Compras, Estoque/WMS, Produção/PCP, Financeiro, RH e Expedição/Logística.
+ERP SaaS corporativo multiempresa para varejo, e-commerce, distribuição e indústria, cobrindo Comercial/CRM, Vendas/PDV, Fiscal, Compras, Estoque/WMS, Produção/PCP/MRP, Qualidade, Manutenção, Financeiro/Controladoria, RH/eSocial, Expedição/Logística, Etiquetas e BI.
 
 ## Segurança do projeto
 
-Este repositório é independente. Não reutilize banco, secrets, storage, filas, domínio ou infraestrutura de outros sistemas. Toda consulta operacional no backend usa o `tenantId` obtido da sessão e toda criação operacional gera auditoria.
+Este repositório é independente. Não reutilize banco, secrets, storage, filas, domínio ou infraestrutura de outros sistemas. Toda consulta operacional deve respeitar o `tenantId` da sessão e ações sensíveis devem gerar auditoria.
 
-O projeto Supabase destinado exclusivamente a este sistema é:
-
+Projeto Supabase exclusivo:
 - Project ref: `fwlnvyaljhehnqirtwzm`
 - API URL: `https://fwlnvyaljhehnqirtwzm.supabase.co`
 
-Nenhuma credencial secreta deve ser commitada.
+Nenhuma credencial, certificado digital, token fiscal ou CSC deve ser commitado.
 
-## Arquitetura atual
+## Arquitetura
 
 - Next.js 15 + React 19
 - PostgreSQL / Supabase
-- Prisma ORM com mapeamento explícito para tabelas `snake_case`
-- Supabase Auth para login
-- Sessão HTTP-only da aplicação contendo usuário, tenant e função
-- Row Level Security no Supabase por `tenant_id`
-- Auditoria por ação operacional
-- Docker para ambiente local
-- GitHub Actions com PostgreSQL real no CI
+- Prisma ORM
+- Supabase Auth
+- sessão HTTP-only com usuário, tenant e função
+- Row Level Security por `tenant_id`
+- auditoria operacional
+- Docker local
+- GitHub Actions com PostgreSQL 17 e validação de todas as migrations
 
-## Estado da entrega
+## Núcleo funcional já versionado
 
-A base executável inclui autenticação, tenant, dashboard executivo e CRUD real para módulos essenciais. `prisma/seed.ts` contém somente dados de desenvolvimento e fica bloqueado por padrão. Integrações fiscais, pagamentos, marketplaces, bureaus, mensageria e demais conectores externos não são simulados como produção e exigem credenciais/homologação oficiais.
+### Fundação
+- tenants, memberships e organizações;
+- clientes, fornecedores e produtos;
+- pedidos de venda e compra;
+- estoque básico, produção, financeiro, RH e expedição;
+- autenticação, isolamento multiempresa e auditoria.
 
-## Executar localmente com Docker
+### ERP ampliado
+A migration `supabase/migrations/20260901020000_full_erp_core.sql` adiciona:
+- itens de pedidos de venda e compra;
+- perfis fiscais e regras tributárias;
+- documentos fiscais, itens e eventos;
+- NF-e 55 e NFC-e 65 como modelos iniciais do motor fiscal;
+- estrutura para NFS-e, CT-e e MDF-e;
+- endereçamento WMS, lotes, séries e movimentações;
+- centros de trabalho, BOM e roteiros;
+- inspeções de qualidade e não conformidades;
+- ativos e ordens de manutenção;
+- modelos de etiquetas e filas de impressão;
+- centros de custo, contas bancárias e movimentos de caixa;
+- RLS para todas as novas entidades.
+
+## Fiscal
+
+Endpoints disponíveis:
+- `GET /api/fiscal/documents`: lista documentos do tenant;
+- `POST /api/fiscal/documents`: cria rascunho fiscal;
+- `POST /api/fiscal/documents/:id/authorize`: envia para um adaptador fiscal configurado em ambiente seguro.
+
+O ERP não simula autorização em produção. Para emissão real é necessário configurar um emissor/adapter homologado, certificados e credenciais oficiais. O retorno de autorização grava chave de acesso, protocolo e status; rejeições também ficam registradas.
+
+O motor fiscal deve permanecer versionado para acompanhar NF-e/NFC-e, IBS/CBS, regras de validação e demais alterações oficiais de 2026 em diante.
+
+## Etiquetas
+
+`POST /api/labels/zpl` gera ZPL para:
+- produto;
+- expedição;
+- palete/SSCC;
+- endereço WMS;
+- volume/packing.
+
+A migration inclui templates e filas de impressão para evolução com impressoras térmicas e agentes locais.
+
+## Supabase
+
+As migrations devem ser aplicadas, em ordem, exclusivamente no projeto `fwlnvyaljhehnqirtwzm`:
+1. `20260901010000_enterprise_foundation.sql`
+2. `20260901020000_full_erp_core.sql`
+
+## Primeiro acesso
+
+1. Criar usuário no Supabase Auth.
+2. Autenticar o usuário.
+3. Executar a RPC `create_tenant_for_current_user(nome, slug)` para criar tenant e membership `owner`.
+4. Cadastrar a empresa emissora e parâmetros fiscais.
+5. Configurar o adaptador fiscal e seus secrets somente no ambiente de produção.
+
+## Execução local
 
 ```bash
 docker compose up --build
 ```
 
-Ou manualmente:
+Ou:
 
 ```bash
 cp .env.example .env
@@ -45,52 +100,6 @@ npx prisma db push
 npm run dev
 ```
 
-Para usar dados de demonstração em desenvolvimento:
-
-```bash
-ALLOW_DEMO_SEED=true npm run db:seed
-```
-
-O seed não cria usuários de autenticação. Usuários devem existir no Supabase Auth e possuir vínculo em `tenant_memberships`.
-
-## Supabase
-
-A migration `supabase/migrations/20260901010000_enterprise_foundation.sql` cria:
-
-- tenants e memberships;
-- organizações;
-- clientes e fornecedores;
-- produtos, depósitos e saldos de estoque;
-- pedidos de venda e compra;
-- ordens de produção;
-- contas a receber e pagar;
-- colaboradores;
-- expedições;
-- auditoria;
-- índices por tenant;
-- RLS;
-- funções seguras de verificação de tenant e papel;
-- RPC `create_tenant_for_current_user` para bootstrap da primeira empresa.
-
-A migration deve ser aplicada exclusivamente no projeto `fwlnvyaljhehnqirtwzm`.
-
-## Variáveis de produção
-
-Configure no ambiente de deploy, sem commit:
-
-- `DATABASE_URL`: conexão pelo pooler do Supabase;
-- `DIRECT_URL`: conexão direta para migrations;
-- `SUPABASE_URL`;
-- `SUPABASE_PUBLISHABLE_KEY`;
-- `AUTH_SECRET` com pelo menos 32 caracteres aleatórios.
-
-## Primeiro acesso
-
-1. Criar o usuário em Supabase Auth ou por fluxo de cadastro autorizado.
-2. Autenticar esse usuário.
-3. Executar a RPC `create_tenant_for_current_user(nome, slug)` para criar tenant + membership `owner`.
-4. A partir daí, o login da aplicação encontra o tenant automaticamente e cria a sessão corporativa.
-
 ## Validação
 
-O workflow `.github/workflows/ci.yml` executa geração Prisma, criação do schema em PostgreSQL, typecheck, lint e build a cada push na `main`.
+O workflow `.github/workflows/ci.yml` executa todas as migrations em um PostgreSQL limpo, gera o Prisma Client, cria o schema de CI, roda TypeScript, lint e build Next.js a cada push na `main`.
