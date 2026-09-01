@@ -38,7 +38,7 @@ jobs:
         with:
           node-version: 22
 
-      - name: Validate Supabase migration SQL
+      - name: Validate all Supabase migrations SQL
         run: |
           createdb -h localhost -U postgres industrial_migration_ci
           psql -h localhost -U postgres -d industrial_migration_ci -v ON_ERROR_STOP=1 <<'SQL'
@@ -48,7 +48,10 @@ jobs:
           create table auth.users(id uuid primary key);
           create or replace function auth.uid() returns uuid language sql stable as $$ select null::uuid $$;
           SQL
-          psql -h localhost -U postgres -d industrial_migration_ci -v ON_ERROR_STOP=1 -f supabase/migrations/20260901010000_enterprise_foundation.sql
+          for file in $(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | sort); do
+            echo "Applying $file"
+            psql -h localhost -U postgres -d industrial_migration_ci -v ON_ERROR_STOP=1 -f "$file"
+          done
 
       - run: npm install
       - run: npx prisma generate
