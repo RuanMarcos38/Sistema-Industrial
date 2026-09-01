@@ -1,16 +1,36 @@
 services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sistema_industrial
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sistema_industrial"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - industrial_pg_data:/var/lib/postgresql/data
+
   app:
     build: .
-    ports: ["3000:3000"]
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
     environment:
-      DATABASE_URL: file:/data/sistema-industrial.db
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/sistema_industrial?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@db:5432/sistema_industrial?schema=public
       AUTH_SECRET: ${AUTH_SECRET:-alterar-antes-de-publicar-uma-chave-segura}
-    volumes:
-      - industrial_data:/data
+      SUPABASE_URL: ${SUPABASE_URL:-https://fwlnvyaljhehnqirtwzm.supabase.co}
+      SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-sb_publishable_substituir}
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
       interval: 15s
       timeout: 5s
       retries: 5
+
 volumes:
-  industrial_data:
+  industrial_pg_data:
