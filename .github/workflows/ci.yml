@@ -30,12 +30,26 @@ jobs:
       AUTH_SECRET: ci-only-secret-change-me-32-characters
       SUPABASE_URL: https://example.supabase.co
       SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+      PGPASSWORD: postgres
 
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Validate Supabase migration SQL
+        run: |
+          createdb -h localhost -U postgres industrial_migration_ci
+          psql -h localhost -U postgres -d industrial_migration_ci -v ON_ERROR_STOP=1 <<'SQL'
+          create role anon nologin;
+          create role authenticated nologin;
+          create schema auth;
+          create table auth.users(id uuid primary key);
+          create or replace function auth.uid() returns uuid language sql stable as $$ select null::uuid $$;
+          SQL
+          psql -h localhost -U postgres -d industrial_migration_ci -v ON_ERROR_STOP=1 -f supabase/migrations/20260901010000_enterprise_foundation.sql
+
       - run: npm install
       - run: npx prisma generate
       - run: npx prisma db push
